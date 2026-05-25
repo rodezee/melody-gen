@@ -1,0 +1,32 @@
+{
+  "dependencies": {
+    "midi-writer-js": "^3.2.1",
+    "soundfont-player": "^0.12.0",
+    "spessasynth_lib": "^4.3.4",
+    "vite": "^8.0.14"
+  },
+  "name": "melody-gen",
+  "version": "1.0.0",
+  "description": "simple midi melody generator",
+  "main": "index.html",
+  "devDependencies": {},
+  "scripts": {
+    "test": "true"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rodezee/melody-gen.git"
+  },
+  "keywords": [
+    "simple",
+    "midi",
+    "melody",
+    "generator"
+  ],
+  "author": "rodezee",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rodezee/melody-gen/issues"
+  },
+  "homepage": "https://github.com/rodezee/melody-gen#readme"
+}

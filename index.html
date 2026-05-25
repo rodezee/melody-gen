@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser MIDI Melody Generator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #121214;
+            color: #e1e1e6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background: #1c1c1f;
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 { margin-top: 0; color: #4fa8ff; }
+        p { color: #a9a9b2; font-size: 0.95rem; line-height: 1.5; margin-bottom: 2rem; }
+        
+        .config-panel {
+            background: #26262b;
+            padding: 1.2rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        .config-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        .config-group {
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        .config-row .config-group { margin-bottom: 0; }
+        .config-group:last-child { margin-bottom: 0; }
+        label {
+            font-size: 0.85rem;
+            color: #4fa8ff;
+            margin-bottom: 0.4rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        input, select {
+            background: #121214;
+            border: 1px solid #3a3a3e;
+            color: #e1e1e6;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        input:focus, select:focus {
+            border-color: #4fa8ff;
+            outline: none;
+        }
+
+        .btn-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 1.5rem;
+        }
+        .btn-horizontal {
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            color: #121214;
+            border: none;
+            padding: 14px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex: 1;
+        }
+        #genBtn { background: #4fa8ff; color: #121214; }
+        #genBtn:hover { background: #73bcff; }
+        
+        #playBtn { background: #ffb300; display: none; }
+        #playBtn:hover { background: #ffc43d; }
+        
+        #downloadBtn { background: #00e676; display: none; }
+        #downloadBtn:hover { background: #33ff97; }
+        
+        button:disabled { 
+            background: #3a3a3e !important; 
+            color: #727278 !important; 
+            cursor: not-allowed; 
+        }
+        
+        .status {
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+            color: #a9a9b2;
+            font-family: monospace;
+            background: #121214;
+            padding: 10px;
+            border-radius: 6px;
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Melody Generator</h1>
+    <p>Select your musical keys and parameters, generate a unique phrase pattern, and preview it before downloading.</p>
+    
+    <div class="config-panel">
+        <div class="config-row">
+            <div class="config-group">
+                <label for="keySelect">Root Key</label>
+                <select id="keySelect">
+                    <option value="0">C</option>
+                    <option value="1">C# / Db</option>
+                    <option value="2">D</option>
+                    <option value="3">D# / Eb</option>
+                    <option value="4">E</option>
+                    <option value="5">F</option>
+                    <option value="6">F# / Gb</option>
+                    <option value="7">G</option>
+                    <option value="8">G# / Ab</option>
+                    <option value="9">A</option>
+                    <option value="10">A# / Bb</option>
+                    <option value="11">B</option>
+                </select>
+            </div>
+            <div class="config-group">
+                <label for="bpmInput">Tempo (BPM)</label>
+                <input type="number" id="bpmInput" value="120" min="60" max="200">
+            </div>
+        </div>
+        <div class="config-group">
+            <label for="scaleSelect">Musical Scale Mode</label>
+            <select id="scaleSelect">
+                <option value="minor_pent">Minor Pentatonic (Moody / Rock / Hip-Hop)</option>
+                <option value="major_pent">Major Pentatonic (Bright / Pop / Folk)</option>
+                <option value="blues">Blues Scale (Expressive / Jazz / Soul)</option>
+                <option value="natural_minor">Natural Minor (Dramatic / Classical)</option>
+            </select>
+        </div>
+        <div class="config-group">
+            <label for="lengthSelect">Melody Note Count</label>
+            <select id="lengthSelect">
+                <option value="16">16 Notes (Short Hook)</option>
+                <option value="32" selected>32 Notes (Standard Phrase)</option>
+                <option value="64">64 Notes (Long Progression)</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="btn-vertical">
+        <button id="genBtn" disabled>Loading SoundFont...</button>
+        <div class="btn-horizontal">
+            <button id="playBtn">Play Preview</button>
+            <button id="downloadBtn">Download MIDI</button>
+        </div>
+    </div>
+    
+    <div id="status" class="status">Downloading assets...</div>
+</div>
+
+<script type="module">
+    import Soundfont from "soundfont-player";
+    import MidiWriter from "midi-writer-js";
+
+    const SOUNDFONT_URL = "https://cdn.jsdelivr.net/gh/ryohey/signal@4569a31/public/A320U.sf2";
+    
+    const SCALE_FORMULAS = {
+        minor_pent:    [0, 3, 5, 7, 10, 12, 15, 17, 19, 22],
+        major_pent:    [0, 2, 4, 7, 9, 12, 14, 16, 19, 21],
+        blues:         [0, 3, 5, 6, 7, 10, 12, 15, 17, 18],
+        natural_minor: [0, 2, 3, 5, 7, 8, 10, 12, 14, 15]
+    };
+    
+    const DURATIONS = [0.25, 0.25, 0.5, 0.5, 1.0]; 
+    
+    // --- NATIVE MIDI STRINGS MAP ---
+    // Mapping our playback beat floats directly to explicit string formats:
+    // 0.25 beat = Sixteenth note ("16")
+    // 0.50 beat = Eighth note ("8")
+    // 1.00 beat = Quarter note ("4")
+    const MIDI_DURATION_MAP = {
+        0.25: "16", 
+        0.5:  "8", 
+        1.0:  "4"  
+    };
+
+    // Corresponding string flags to let the wait tracker calculate rest offsets smoothly
+    const MIDI_WAIT_MAP = {
+        0.25: "16",
+        0.5:  "8",
+        1.0:  "4"
+    };
+
+    let audioCtx = null;
+    let pianoInstrument = null;
+    
+    let isPlaying = false;
+    let currentNoteIndex = 0;
+    let sequenceTimeout = null;
+    let generatedMelody = []; 
+
+    const genBtn = document.getElementById('genBtn');
+    const playBtn = document.getElementById('playBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const statusDiv = document.getElementById('status');
+    
+    const keySelect = document.getElementById('keySelect');
+    const bpmInput = document.getElementById('bpmInput');
+    const scaleSelect = document.getElementById('scaleSelect');
+    const lengthSelect = document.getElementById('lengthSelect');
+
+    async function initSynth() {
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            statusDiv.innerText = "Downloading SoundFont assets...";
+            
+            pianoInstrument = await Soundfont.instrument(audioCtx, 'acoustic_grand_piano', {
+                soundfont: 'FluidR3_GM',
+                url: SOUNDFONT_URL
+            });
+
+            genBtn.disabled = false;
+            genBtn.innerText = "Generate New Melody";
+            statusDiv.innerText = "Ready to generate!";
+        } catch (error) {
+            console.error(error);
+            statusDiv.innerText = "Error loading components.";
+            statusDiv.style.color = "#ff5252";
+        }
+    }
+
+    function generateNewMelody() {
+        stopPlayback();
+        generatedMelody = [];
+        
+        const totalNotes = parseInt(lengthSelect.value);
+        const rootOffset = 60 + parseInt(keySelect.value);
+        const formula = SCALE_FORMULAS[scaleSelect.value];
+        const runtimeScale = formula.map(interval => rootOffset + interval);
+
+        for (let i = 0; i < totalNotes; i++) {
+            const isRest = Math.random() < 0.15; 
+            const note = runtimeScale[Math.floor(Math.random() * runtimeScale.length)];
+            const duration = DURATIONS[Math.floor(Math.random() * DURATIONS.length)];
+            
+            generatedMelody.push({ isRest, pitch: note, duration });
+        }
+
+        playBtn.style.display = "block";
+        downloadBtn.style.display = "block";
+        currentNoteIndex = 0;
+        
+        statusDiv.innerText = `Generated a unique ${totalNotes}-note phrase! Click 'Play Preview' to listen.`;
+    }
+
+    function playLoop() {
+        if (!isPlaying || generatedMelody.length === 0) return;
+
+        if (currentNoteIndex >= generatedMelody.length) {
+            currentNoteIndex = 0; 
+        }
+
+        const bpm = parseInt(bpmInput.value) || 120;
+        const beatDuration = 60 / bpm;
+        const currentNote = generatedMelody[currentNoteIndex];
+        const durationInSeconds = currentNote.duration * beatDuration;
+
+        if (!currentNote.isRest) {
+            statusDiv.innerText = `[Playing Note ${currentNoteIndex + 1}/${generatedMelody.length}] Pitch MIDI: ${currentNote.pitch}`;
+            pianoInstrument.play(currentNote.pitch, audioCtx.currentTime, { 
+                duration: durationInSeconds,
+                gain: Math.random() * (0.85 - 0.6) + 0.6 
+            });
+        } else {
+            statusDiv.innerText = `[Note ${currentNoteIndex + 1}/${generatedMelody.length}] Rest (•)`;
+        }
+
+        currentNoteIndex++;
+
+        sequenceTimeout = setTimeout(() => {
+            playLoop();
+        }, durationInSeconds * 1000);
+    }
+
+    function stopPlayback() {
+        isPlaying = false;
+        clearTimeout(sequenceTimeout);
+        playBtn.innerText = "Play Preview";
+    }
+
+    // --- RE-ENGINEERED STRINGS BASED EXPORT ---
+    function exportToMidiFile() {
+        if (generatedMelody.length === 0) return;
+
+        const track = new MidiWriter.Track();
+        track.setTempo(parseInt(bpmInput.value) || 120);
+        track.addTrackName('Synced Melody');
+
+        let accumulatedWaitValues = [];
+
+        generatedMelody.forEach((item) => {
+            if (item.isRest) {
+                // If it's a rest, store the explicit length string into our wait array
+                const waitStr = MIDI_WAIT_MAP[item.duration] || "4";
+                accumulatedWaitValues.push(waitStr);
+            } else {
+                const noteDurationString = MIDI_DURATION_MAP[item.duration] || "4";
+                const noteOptions = {
+                    pitch: [item.pitch],
+                    duration: noteDurationString
+                };
+
+                // If rests occurred prior to this note, supply them as a string array to the 'wait' attribute
+                if (accumulatedWaitValues.length > 0) {
+                    noteOptions.wait = accumulatedWaitValues;
+                    accumulatedWaitValues = []; // Flush rest array
+                }
+
+                track.addEvent(new MidiWriter.NoteEvent(noteOptions));
+            }
+        });
+
+        // If a rest lands right at the terminal boundary line, add a trailing anchor event
+        if (accumulatedWaitValues.length > 0) {
+             track.addEvent(new MidiWriter.NoteEvent({
+                 pitch: [0],
+                 duration: "1",
+                 wait: accumulatedWaitValues
+             }));
+        }
+
+        const write = new MidiWriter.Writer(track);
+        const base64Data = write.dataUri();
+
+        const link = document.createElement("a");
+        link.href = base64Data;
+        
+        const keyName = keySelect.options[keySelect.selectedIndex].text.replace(/ \/ /g, "_");
+        link.download = `perfect_tempo_${keyName}.mid`;
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    genBtn.addEventListener('click', generateNewMelody);
+
+    playBtn.addEventListener('click', async () => {
+        if (audioCtx && audioCtx.state === 'suspended') {
+            await audioCtx.resume();
+        }
+
+        if (isPlaying) {
+            stopPlayback();
+            statusDiv.innerText = "Playback paused.";
+        } else {
+            isPlaying = true;
+            playBtn.innerText = "Pause Preview";
+            playLoop();
+        }
+    });
+
+    downloadBtn.addEventListener('click', exportToMidiFile);
+    window.addEventListener('DOMContentLoaded', initSynth);
+</script>
+
+</body>
+</html>
